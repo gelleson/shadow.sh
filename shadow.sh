@@ -42,15 +42,54 @@ cmd_init() {
 }
 
 cmd_add() {
-    local file="$1"
     local sp=$(shadow_path)
     local branch=$(current_branch)
+    local added_files=()
+    local failed=0
 
-    [[ -f "$file" ]] || { echo "File not found: $file"; exit 1; }
+    [[ $# -eq 0 ]] && { echo "Usage: shadow add <file|dir>..."; exit 1; }
 
     # Ensure branch exists
     _ensure_branch "$branch"
     sgit checkout -q "$branch"
+
+    # Process each argument
+    for path in "$@"; do
+        if [[ -f "$path" ]]; then
+            # Single file
+            _add_single_file "$path" "$sp"
+            added_files+=("$path")
+        elif [[ -d "$path" ]]; then
+            # Directory - add all files recursively
+            while IFS= read -r -d '' file; do
+                _add_single_file "$file" "$sp"
+                added_files+=("$file")
+            done < <(find "$path" -type f -print0)
+        else
+            echo "File not found: $path" >&2
+            failed=1
+        fi
+    done
+
+    [[ $failed -eq 1 ]] && exit 1
+
+    # Commit all changes
+    sgit add -A
+    if sgit diff --cached --quiet; then
+        echo "No new files to add"
+    else
+        sgit commit -q -m "add files" || true
+        if [[ ${#added_files[@]} -eq 1 ]]; then
+            echo "Added ${added_files[0]}"
+        else
+            echo "Added ${#added_files[@]} file(s)"
+        fi
+    fi
+}
+
+_add_single_file() {
+    local file="$1"
+    local sp="$2"
 
     # Add to .shadowconfig if not present
     grep -qxF "$file" "$sp/.shadowconfig" 2>/dev/null || echo "$file" >> "$sp/.shadowconfig"
@@ -58,12 +97,6 @@ cmd_add() {
     # Copy file
     mkdir -p "$sp/$(dirname "$file")"
     cp "$file" "$sp/$file"
-
-    # Commit
-    sgit add -A
-    sgit commit -q -m "add $file" || true
-
-    echo "Added $file"
 }
 
 cmd_remove() {
@@ -291,7 +324,7 @@ _ensure_branch() {
 # Main
 case "${1:-}" in
     init)             cmd_init ;;
-    add)              cmd_add "$2" ;;
+    add)              shift; cmd_add "$@" ;;
     remove|rm)        cmd_remove "$2" ;;
     save)             shift; cmd_save "$*" ;;
     restore)          cmd_restore ;;
