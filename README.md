@@ -6,12 +6,23 @@ Shadow solves the problem of environment-specific files (like `.env`, config fil
 
 ## Installation
 
-```bash
-# Clone the repository
-git clone https://github.com/gelleson/shadow.git
+### Quick Install
 
-# Add to PATH or create an alias
-alias shadow="/path/to/shadow/shadow.sh"
+```bash
+curl -fsSL https://raw.githubusercontent.com/gelleson/shadow/main/install.sh | bash
+```
+
+### Custom Location
+
+```bash
+INSTALL_DIR=/usr/local/bin curl -fsSL https://raw.githubusercontent.com/gelleson/shadow/main/install.sh | bash
+```
+
+### Manual
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/gelleson/shadow/main/shadow.sh -o ~/.local/bin/shadow
+chmod +x ~/.local/bin/shadow
 ```
 
 ## Quick Start
